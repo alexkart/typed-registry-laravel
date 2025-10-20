@@ -62,12 +62,40 @@ final class EnvProvider implements Provider
             return $value;
         }
 
+        // Trim whitespace (is_numeric allows it, but we need clean strings)
+        $value = trim($value);
+
         // Check if it's a float representation (contains decimal point or scientific notation)
         if (strpbrk($value, '.eE') !== false) {
             return (float) $value;
         }
 
-        // Otherwise it's an integer (handles leading zeros like "042", leading plus like "+42")
-        return (int) $value;
+        // For whole numbers, check if they fit in PHP's int range
+        // We need to handle leading zeros/plus, so normalize the value first
+        // Extract sign separately to handle negative numbers with leading zeros (e.g., "-042")
+        $sign = '';
+        $digits = $value;
+
+        if ($digits[0] === '-' || $digits[0] === '+') {
+            $sign = $digits[0] === '-' ? '-' : '';
+            $digits = substr($digits, 1);
+        }
+
+        // Remove leading zeros from the digits
+        $digits = ltrim($digits, '0');
+        if ($digits === '') {
+            $digits = '0';  // All zeros
+        }
+
+        $normalized = $sign . $digits;
+
+        // Use filter_var on normalized value to check int range
+        $intValue = filter_var($normalized, FILTER_VALIDATE_INT);
+        if ($intValue !== false) {
+            return $intValue;
+        }
+
+        // Number overflowed int range, return as float to preserve precision
+        return (float) $value;
     }
 }

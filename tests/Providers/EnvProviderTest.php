@@ -220,6 +220,36 @@ final class EnvProviderTest extends TestCase
         self::assertIsInt($value);
     }
 
+    public function testHandlesNegativeWithLeadingZeros(): void
+    {
+        putenv('TEST_VAR=-042');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should cast to int(-42), not float(-42.0)
+        self::assertSame(-42, $value);
+        self::assertIsInt($value);
+    }
+
+    public function testHandlesWhitespaceWithLeadingZeros(): void
+    {
+        putenv('TEST_VAR= 042');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should trim whitespace and cast to int(42), not float(42.0)
+        self::assertSame(42, $value);
+        self::assertIsInt($value);
+    }
+
+    public function testHandlesWhitespaceWithNegativeAndLeadingZeros(): void
+    {
+        putenv('TEST_VAR= -042 ');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should trim whitespace and cast to int(-42)
+        self::assertSame(-42, $value);
+        self::assertIsInt($value);
+    }
+
     public function testHandlesLeadingZerosWithDecimal(): void
     {
         putenv('TEST_VAR=042.5');
@@ -238,5 +268,41 @@ final class EnvProviderTest extends TestCase
         $port = $this->registry->getInt('TEST_VAR');
 
         self::assertSame(42, $port);
+    }
+
+    public function testHandlesIntegerOverflowAsFloat(): void
+    {
+        // PHP_INT_MAX + 1 should overflow to float
+        putenv('TEST_VAR=9223372036854775808');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should be float, not saturated int
+        self::assertIsFloat($value);
+        self::assertSame(9.223372036854776E+18, $value);
+    }
+
+    public function testHandlesNegativeIntegerOverflowAsFloat(): void
+    {
+        // PHP_INT_MIN - 1 should overflow to float
+        putenv('TEST_VAR=-9223372036854775809');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should be float, not saturated int
+        self::assertIsFloat($value);
+        self::assertSame(-9.223372036854776E+18, $value);
+    }
+
+    public function testIntegrationIntegerOverflowWorksWithTypedRegistry(): void
+    {
+        putenv('TEST_VAR=9223372036854775808');
+
+        // getFloat should work (value is float)
+        $value = $this->registry->getFloat('TEST_VAR');
+        self::assertSame(9.223372036854776E+18, $value);
+
+        // getInt should throw (value is float, not int)
+        $this->expectException(\TypedRegistry\RegistryTypeError::class);
+        $this->expectExceptionMessage("key 'TEST_VAR' must be int, got 9.223372036854776E+18");
+        $this->registry->getInt('TEST_VAR');
     }
 }

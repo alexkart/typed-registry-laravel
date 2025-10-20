@@ -222,12 +222,18 @@ $timeout = TypedConfig::getFloatOr('cache.timeout', 3.0); // 3.0
 The `EnvProvider` intelligently casts numeric environment variable strings:
 
 ```php
-// Integer casting (handles leading zeros and plus signs)
+// Integer casting (handles leading zeros, plus signs, whitespace, prevents overflow)
 "123"    → int(123)
 "-456"   → int(-456)
 "0"      → int(0)
-"042"    → int(42)    // Leading zeros removed
-"+42"    → int(42)    // Leading plus removed
+"042"    → int(42)     // Leading zeros removed
+"-042"   → int(-42)    // Negative with leading zeros
+"+42"    → int(42)     // Leading plus removed
+" 042 "  → int(42)     // Whitespace trimmed
+
+// Integer overflow protection (values exceeding PHP_INT_MAX/MIN)
+"9223372036854775808"  → float(9.223372036854776E+18)  // Too large for int
+"-9223372036854775809" → float(-9.223372036854776E+18) // Too small for int
 
 // Float casting (anything with decimal point or scientific notation)
 "3.14"   → float(3.14)

@@ -100,14 +100,27 @@ Auto-discovery is configured in `composer.json` under `extra.laravel`.
 **Implementation detail:**
 ```php
 if (!is_numeric($value)) return $value;
-if (strpbrk($value, '.eE') !== false) return (float)$value;  // Has decimal or exponent
-return (int)$value;  // Whole number (handles leading zeros, plus signs)
+
+$value = trim($value);  // Remove whitespace (is_numeric allows it)
+
+if (strpbrk($value, '.eE') !== false) return (float)$value;
+
+// Extract sign, normalize digits, validate int range
+$sign = ($value[0] === '-') ? '-' : '';
+$digits = ltrim(ltrim($value, '+-'), '0') ?: '0';
+$normalized = $sign . $digits;
+
+$intValue = filter_var($normalized, FILTER_VALIDATE_INT);
+return ($intValue !== false) ? $intValue : (float)$value;
 ```
 
 This ensures:
 - `"123"` → `int(123)`
 - `"042"` → `int(42)` (leading zeros handled)
+- `"-042"` → `int(-42)` (negative with leading zeros)
 - `"+42"` → `int(42)` (leading plus handled)
+- `" 042 "` → `int(42)` (whitespace trimmed)
+- `"9223372036854775808"` → `float` (overflow protection)
 - `"123.0"` → `float(123.0)` (has decimal point)
 - `"1e3"` → `float(1000.0)` (scientific notation)
 
