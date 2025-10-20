@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace TypedRegistry\Laravel;
 
-use Illuminate\Contracts\Config\Repository;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
 use TypedRegistry\Laravel\Providers\ConfigProvider;
@@ -40,10 +38,8 @@ final class TypedRegistryServiceProvider extends ServiceProvider implements Defe
         });
 
         // Register TypedRegistry for config repository (strict, no casting)
-        $this->app->singleton('typed-registry.config', function (Application $app): TypedRegistry {
-            /** @var Repository $config */
-            $config = $app->make('config');
-            return new TypedRegistry(new ConfigProvider($config));
+        $this->app->singleton('typed-registry.config', function (): TypedRegistry {
+            return new TypedRegistry(new ConfigProvider());
         });
     }
 

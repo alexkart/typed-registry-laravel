@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace TypedRegistry\Laravel\Providers;
 
-use Illuminate\Contracts\Config\Repository;
+use Illuminate\Support\Facades\Config;
 use TypedRegistry\Provider;
 
 /**
- * Laravel configuration repository provider (strict, no type casting).
+ * Laravel configuration provider (strict, no type casting).
  *
- * This provider wraps Laravel's configuration repository and provides
+ * This provider wraps Laravel's Config facade and provides
  * strict type-safe access to config values. Unlike EnvProvider, this
  * performs NO type coercion - values are returned exactly as stored.
  *
@@ -35,15 +35,6 @@ use TypedRegistry\Provider;
 final class ConfigProvider implements Provider
 {
     /**
-     * Create a new config provider instance.
-     *
-     * @param Repository $config Laravel's config repository instance
-     */
-    public function __construct(private Repository $config)
-    {
-    }
-
-    /**
      * Retrieve a configuration value for the given key.
      *
      * Supports dot-notation for nested values (e.g., "database.default").
@@ -53,6 +44,6 @@ final class ConfigProvider implements Provider
      */
     public function get(string $key): mixed
     {
-        return $this->config->get($key);
+        return Config::get($key);
     }
 }

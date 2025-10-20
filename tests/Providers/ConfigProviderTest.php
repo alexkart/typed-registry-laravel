@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace TypedRegistry\Laravel\Tests\Providers;
 
-use Illuminate\Config\Repository;
 use Orchestra\Testbench\TestCase;
 use TypedRegistry\Laravel\Providers\ConfigProvider;
 use TypedRegistry\TypedRegistry;
@@ -14,42 +13,45 @@ use TypedRegistry\TypedRegistry;
  */
 final class ConfigProviderTest extends TestCase
 {
-    private Repository $config;
     private ConfigProvider $provider;
     private TypedRegistry $registry;
+
+    protected function defineEnvironment($app): void
+    {
+        // Set up test configuration values
+        $app['config']->set('app', [
+            'name' => 'Laravel',
+            'debug' => true,
+            'port' => 8080,
+            'timeout' => 2.5,
+        ]);
+
+        $app['config']->set('testpackage', [
+            'default' => 'mysql',
+            'connections' => [
+                'mysql' => [
+                    'host' => 'localhost',
+                    'port' => 3306,
+                    'database' => 'test_db',
+                ],
+            ],
+        ]);
+
+        $app['config']->set('features', [
+            'enabled' => ['auth', 'api', 'admin'],
+        ]);
+
+        $app['config']->set('labels', [
+            'env' => 'production',
+            'tier' => 'web',
+        ]);
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Create a test config repository
-        $this->config = new Repository([
-            'app' => [
-                'name' => 'Laravel',
-                'debug' => true,
-                'port' => 8080,
-                'timeout' => 2.5,
-            ],
-            'database' => [
-                'default' => 'mysql',
-                'connections' => [
-                    'mysql' => [
-                        'host' => 'localhost',
-                        'port' => 3306,
-                        'database' => 'test_db',
-                    ],
-                ],
-            ],
-            'features' => [
-                'enabled' => ['auth', 'api', 'admin'],
-            ],
-            'labels' => [
-                'env' => 'production',
-                'tier' => 'web',
-            ],
-        ]);
-
-        $this->provider = new ConfigProvider($this->config);
+        $this->provider = new ConfigProvider();
         $this->registry = new TypedRegistry($this->provider);
     }
 
@@ -83,7 +85,7 @@ final class ConfigProviderTest extends TestCase
 
     public function testGetSupportsNestedDotNotation(): void
     {
-        $value = $this->provider->get('database.connections.mysql.host');
+        $value = $this->provider->get('testpackage.connections.mysql.host');
 
         self::assertSame('localhost', $value);
     }
@@ -111,7 +113,7 @@ final class ConfigProviderTest extends TestCase
 
     public function testIntegrationWithTypedRegistryInt(): void
     {
-        $port = $this->registry->getInt('database.connections.mysql.port');
+        $port = $this->registry->getInt('testpackage.connections.mysql.port');
 
         self::assertSame(3306, $port);
     }
@@ -147,7 +149,7 @@ final class ConfigProviderTest extends TestCase
     public function testDoesNotPerformTypeCoercion(): void
     {
         // Store a string that looks like a number
-        $this->config->set('app.port_string', '8080');
+        $this->app['config']->set('app.port_string', '8080');
 
         $value = $this->provider->get('app.port_string');
 

@@ -81,9 +81,9 @@ TypedEnv::getString('APP_NAME'); // "Laravel" → "Laravel"
 - Null strings (`"null"`, `"(null)"`) → `null` (handled by Laravel's `Env`)
 - All other strings remain unchanged
 
-#### `TypedConfig` - Configuration Repository (Strict)
+#### `TypedConfig` - Configuration (Strict)
 
-Wraps Laravel's config repository with **no type casting**:
+Wraps Laravel's `Config` facade with **no type casting**:
 
 ```php
 // Values must be exactly the expected type
@@ -186,7 +186,7 @@ use TypedRegistry\Laravel\Providers\ConfigProvider;
 
 // Manual instantiation
 $env = new TypedRegistry(new EnvProvider());
-$config = new TypedRegistry(new ConfigProvider($app->make('config')));
+$config = new TypedRegistry(new ConfigProvider());
 
 // Or resolve from container
 $env = app('typed-registry.env');

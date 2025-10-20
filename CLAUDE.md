@@ -68,7 +68,7 @@ Laravel System → Provider → TypedRegistry → Typed values
 ### Built-in Providers
 
 1. **EnvProvider** - Wraps `Illuminate\Support\Env` with numeric type casting
-2. **ConfigProvider** - Wraps `Illuminate\Contracts\Config\Repository` (strict, no casting)
+2. **ConfigProvider** - Wraps `Illuminate\Support\Facades\Config` (strict, no casting)
 
 ### Facades
 
@@ -109,6 +109,8 @@ This ensures `"123"` → `int(123)` but `"123.0"` → `float(123.0)`.
 ### ConfigProvider: Zero Casting
 
 **Why no casting?** Configuration values are PHP arrays with proper types. Coercion would hide bugs.
+
+**Uses `Config::get()` facade directly** - no constructor injection needed, consistent with EnvProvider pattern.
 
 **Example:**
 ```php
@@ -243,8 +245,8 @@ Follow core package pattern - no function imports needed since providers are sim
 
 ### Production Dependencies
 - `alexkart/typed-registry: ^0.1` - Core package
-- `illuminate/support: ^11.0` - Laravel's Env helper and facades
-- `illuminate/contracts: ^11.0` - Repository contract for ConfigProvider
+- `illuminate/support: ^11.0` - Laravel's Env and Config facades
+- `illuminate/contracts: ^11.0` - Laravel contracts for service provider integration
 
 ### Development Dependencies
 - `orchestra/testbench: ^9.0` - Laravel testing harness
