@@ -46,7 +46,7 @@ use Illuminate\Support\Facades\Facade;
  * @see \TypedRegistry\TypedRegistry
  * @see \TypedRegistry\Laravel\Providers\ConfigProvider
  */
-final class TypedConfig extends Facade
+class TypedConfig extends Facade
 {
     /**
      * Get the registered name of the component.

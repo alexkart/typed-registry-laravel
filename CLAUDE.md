@@ -107,6 +107,7 @@ Instead, use:
 
 - **Always use strict types**: `declare(strict_types=1);` at the top of every PHP file
 - **Final classes by default**: Use `final class` unless inheritance is explicitly needed
+- **Exception**: Facades should NOT be final (Laravel IDE Helper extends them for autocomplete)
 - **Explicit return types**: Every method must have a return type declaration
 - **No mixed types**: Avoid `mixed` - use specific types or union types
 - **PHPDoc for arrays**: Use array shape annotations when appropriate
