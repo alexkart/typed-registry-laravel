@@ -100,11 +100,16 @@ Auto-discovery is configured in `composer.json` under `extra.laravel`.
 **Implementation detail:**
 ```php
 if (!is_numeric($value)) return $value;
-if ((string)(int)$value === $value) return (int)$value;
-return (float)$value;
+if (strpbrk($value, '.eE') !== false) return (float)$value;  // Has decimal or exponent
+return (int)$value;  // Whole number (handles leading zeros, plus signs)
 ```
 
-This ensures `"123"` → `int(123)` but `"123.0"` → `float(123.0)`.
+This ensures:
+- `"123"` → `int(123)`
+- `"042"` → `int(42)` (leading zeros handled)
+- `"+42"` → `int(42)` (leading plus handled)
+- `"123.0"` → `float(123.0)` (has decimal point)
+- `"1e3"` → `float(1000.0)` (scientific notation)
 
 ### ConfigProvider: Zero Casting
 

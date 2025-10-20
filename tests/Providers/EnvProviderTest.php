@@ -199,4 +199,44 @@ final class EnvProviderTest extends TestCase
         self::assertSame('123abc', $value);
         self::assertIsString($value);
     }
+
+    public function testHandlesLeadingZeros(): void
+    {
+        putenv('TEST_VAR=042');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should cast to int(42), not float(42.0)
+        self::assertSame(42, $value);
+        self::assertIsInt($value);
+    }
+
+    public function testHandlesLeadingPlus(): void
+    {
+        putenv('TEST_VAR=+123');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should cast to int(123)
+        self::assertSame(123, $value);
+        self::assertIsInt($value);
+    }
+
+    public function testHandlesLeadingZerosWithDecimal(): void
+    {
+        putenv('TEST_VAR=042.5');
+        $value = $this->provider->get('TEST_VAR');
+
+        // Should cast to float because of decimal point
+        self::assertSame(42.5, $value);
+        self::assertIsFloat($value);
+    }
+
+    public function testIntegrationLeadingZerosWorkWithTypedRegistry(): void
+    {
+        putenv('TEST_VAR=042');
+
+        // This should NOT throw - leading zeros should be handled
+        $port = $this->registry->getInt('TEST_VAR');
+
+        self::assertSame(42, $port);
+    }
 }

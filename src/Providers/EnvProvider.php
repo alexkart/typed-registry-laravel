@@ -62,14 +62,12 @@ final class EnvProvider implements Provider
             return $value;
         }
 
-        // Cast to int if it represents a whole number
-        // This ensures "123" → 123, but not "123.0" or "1e3"
-        if ((string) (int) $value === $value) {
-            return (int) $value;
+        // Check if it's a float representation (contains decimal point or scientific notation)
+        if (strpbrk($value, '.eE') !== false) {
+            return (float) $value;
         }
 
-        // Cast to float for decimals and scientific notation
-        // This handles: "3.14", "1e3", "2.5e-4", etc.
-        return (float) $value;
+        // Otherwise it's an integer (handles leading zeros like "042", leading plus like "+42")
+        return (int) $value;
     }
 }
