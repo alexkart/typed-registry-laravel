@@ -7,21 +7,23 @@ namespace TypedRegistry\Laravel;
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
 use TypedRegistry\Laravel\Providers\ConfigProvider;
-use TypedRegistry\Laravel\Providers\EnvProvider;
 use TypedRegistry\TypedRegistry;
 
 /**
  * Laravel service provider for TypedRegistry.
  *
- * Registers two TypedRegistry instances in the service container:
- * - Environment variables (with type casting)
- * - Configuration repository (strict, no casting)
+ * Registers TypedRegistry instance for configuration access in the service container.
+ * Environment variables should be accessed via the typedEnv() helper function in
+ * config files only, following Laravel best practices.
  *
  * Supports Laravel's package auto-discovery feature.
  *
  * **Registered Bindings:**
- * - `'typed-registry.env'` → TypedRegistry with EnvProvider (for TypedEnv facade)
  * - `'typed-registry.config'` → TypedRegistry with ConfigProvider (for TypedConfig facade)
+ *
+ * **Helper Functions:**
+ * - `typedEnv()` → Use in config files only for type-safe env access
+ * - `typedConfig()` → Use anywhere for type-safe config access (same as TypedConfig facade)
  */
 final class TypedRegistryServiceProvider extends ServiceProvider implements DeferrableProvider
 {
@@ -32,11 +34,6 @@ final class TypedRegistryServiceProvider extends ServiceProvider implements Defe
      */
     public function register(): void
     {
-        // Register TypedRegistry for environment variables (with type casting)
-        $this->app->singleton('typed-registry.env', function (): TypedRegistry {
-            return new TypedRegistry(new EnvProvider());
-        });
-
         // Register TypedRegistry for config repository (strict, no casting)
         $this->app->singleton('typed-registry.config', function (): TypedRegistry {
             return new TypedRegistry(new ConfigProvider());
@@ -51,7 +48,6 @@ final class TypedRegistryServiceProvider extends ServiceProvider implements Defe
     public function provides(): array
     {
         return [
-            'typed-registry.env',
             'typed-registry.config',
         ];
     }

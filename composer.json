@@ -54,7 +54,6 @@
         "TypedRegistry\\Laravel\\TypedRegistryServiceProvider"
       ],
       "aliases": {
-        "TypedEnv": "TypedRegistry\\Laravel\\Facades\\TypedEnv",
         "TypedConfig": "TypedRegistry\\Laravel\\Facades\\TypedConfig"
       }
     }

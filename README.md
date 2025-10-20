@@ -1,6 +1,6 @@
 # typed-registry-laravel
 
-Laravel integration for [typed-registry](https://github.com/alexkart/typed-registry) with type-casting providers and convenient facades.
+Laravel integration for [typed-registry](https://github.com/alexkart/typed-registry) following Laravel best practices for environment variable and configuration access.
 
 [![Tests](https://github.com/alexkart/typed-registry-laravel/actions/workflows/tests.yml/badge.svg)](https://github.com/alexkart/typed-registry-laravel/actions)
 [![PHPStan Level](https://img.shields.io/badge/PHPStan-max-blue.svg)](https://phpstan.org/)
@@ -10,8 +10,9 @@ Laravel integration for [typed-registry](https://github.com/alexkart/typed-regis
 
 Laravel's `env()` and `config()` helpers return `mixed` values, making strict type checking difficult. This package provides:
 
-- **Type-safe facades** - `TypedEnv` and `TypedConfig` with strict return types
-- **Intelligent casting** - Environment variables automatically cast from strings (`"8080"` → `8080`)
+- **Type-safe config access** - `TypedConfig` facade and `typedConfig()` helper with strict return types
+- **Type-safe env access** - `typedEnv()` helper for use in config files only (following Laravel best practices)
+- **Intelligent casting** - Environment variables automatically cast from strings (`"8080"` → `8080`, `"1e3"` → `1000.0`)
 - **PHPStan ready** - Works seamlessly with static analysis at max level
 - **Zero runtime overhead** - Simple wrappers around Laravel's existing systems
 
@@ -23,174 +24,237 @@ composer require alexkart/typed-registry-laravel
 
 Requires:
 - PHP 8.3+
-- Laravel 11+
+- Laravel 11+ or 12+
 
-The package uses Laravel's auto-discovery feature. The service provider and facades are registered automatically.
+The package uses Laravel's auto-discovery feature. The service provider and facade are registered automatically.
 
 ## Quick Start
 
-### Environment Variables (with Type Casting)
+### Environment Variables in Config Files
+
+**Following Laravel Best Practices:** Environment variables should ONLY be accessed in config files, never directly in controllers or services.
 
 ```php
-use TypedRegistry\Laravel\Facades\TypedEnv;
-
-// .env file:
-// APP_DEBUG=true
-// APP_PORT=8080
-// APP_TIMEOUT=2.5
-// APP_NAME=Laravel
-
-$debug = TypedEnv::getBool('APP_DEBUG');       // bool(true)
-$port = TypedEnv::getInt('APP_PORT');          // int(8080) - cast from "8080"
-$timeout = TypedEnv::getFloat('APP_TIMEOUT');  // float(2.5) - cast from "2.5"
-$name = TypedEnv::getString('APP_NAME');       // string("Laravel")
+// config/app.php
+return [
+    'name' => typedEnv()->getStringOr('APP_NAME', 'Laravel'),
+    'debug' => typedEnv()->getBoolOr('APP_DEBUG', false),
+    'port' => typedEnv()->getIntOr('APP_PORT', 8080),          // "8080" → 8080
+    'timeout' => typedEnv()->getFloatOr('TIMEOUT', 2.5),       // "2.5" → 2.5
+    'max_items' => typedEnv()->getInt('MAX_ITEMS'),            // Throws if missing
+];
 ```
 
-### Configuration Values (Strict, No Casting)
+### Configuration Access Everywhere
+
+Use the `TypedConfig` facade or `typedConfig()` helper in controllers, services, and anywhere else:
 
 ```php
 use TypedRegistry\Laravel\Facades\TypedConfig;
 
+class UserController
+{
+    public function index()
+    {
+        $perPage = TypedConfig::getInt('app.pagination.per_page');
+        $appName = TypedConfig::getString('app.name');
+        $features = TypedConfig::getStringList('app.enabled_features');
+
+        // Or use the helper
+        $timeout = typedConfig()->getFloat('app.timeout');
+    }
+}
+```
+
+## Laravel Best Practices
+
+### ✅ Correct: Environment Variables
+
+```php
+// ✅ In config files ONLY
 // config/database.php
-$driver = TypedConfig::getString('database.default');
-$port = TypedConfig::getInt('database.connections.mysql.port');
-$options = TypedConfig::getStringMap('database.connections.mysql.options');
+return [
+    'host' => typedEnv()->getStringOr('DB_HOST', '127.0.0.1'),
+    'port' => typedEnv()->getIntOr('DB_PORT', 3306),
+];
+```
+
+### ❌ Wrong: Direct env() in Controllers/Services
+
+```php
+// ❌ NEVER do this - violates Laravel best practices
+class UserController
+{
+    public function index()
+    {
+        $host = env('DB_HOST');  // ❌ Wrong!
+        $port = typedEnv()->getInt('DB_PORT'); // ❌ Still wrong!
+    }
+}
+```
+
+### ✅ Correct: Use Config Instead
+
+```php
+// ✅ Correct - access config, not env
+class UserController
+{
+    public function index()
+    {
+        $host = TypedConfig::getString('database.connections.mysql.host');
+        $port = TypedConfig::getInt('database.connections.mysql.port');
+    }
+}
 ```
 
 ## Features
 
-### Two Facades for Two Use Cases
+### `typedEnv()` Helper - For Config Files Only
 
-#### `TypedEnv` - Environment Variables with Casting
-
-Wraps `Illuminate\Support\Env` and automatically casts numeric strings:
+Wraps `Illuminate\Support\Env` with intelligent type casting for numeric strings:
 
 ```php
-// Automatic type casting:
-TypedEnv::getInt('PORT');    // "8080" → int(8080)
-TypedEnv::getFloat('RATE');  // "2.5" → float(2.5)
-TypedEnv::getBool('DEBUG');  // "true" → bool(true)
+// config/app.php
+return [
+    // Automatic type casting from .env strings:
+    'port' => typedEnv()->getInt('PORT'),           // "8080" → int(8080)
+    'rate' => typedEnv()->getFloat('RATE'),         // "2.5" → float(2.5)
+    'limit' => typedEnv()->getFloat('LIMIT'),       // "1e3" → float(1000.0)
+    'debug' => typedEnv()->getBool('APP_DEBUG'),    // "true" → bool(true)
 
-// Non-numeric strings pass through:
-TypedEnv::getString('APP_NAME'); // "Laravel" → "Laravel"
+    // With defaults (never throws):
+    'name' => typedEnv()->getStringOr('APP_NAME', 'Laravel'),
+    'timeout' => typedEnv()->getFloatOr('TIMEOUT', 30.0),
+];
 ```
 
 **Casting Rules:**
-- Numeric strings → `int` or `float` based on format
+- Numeric strings → `int` or `float` based on format (handles scientific notation, leading zeros, whitespace, overflow)
 - Boolean strings (`"true"`, `"false"`) → `bool` (handled by Laravel's `Env`)
 - Null strings (`"null"`, `"(null)"`) → `null` (handled by Laravel's `Env`)
 - All other strings remain unchanged
 
-#### `TypedConfig` - Configuration (Strict)
+### `TypedConfig` Facade - Use Anywhere
 
-Wraps Laravel's `Config` facade with **no type casting**:
+Wraps Laravel's `Config` facade with **strict typing, no casting**:
 
 ```php
-// Values must be exactly the expected type
-TypedConfig::getInt('app.port');  // ✅ Works if config has int(8080)
-TypedConfig::getInt('app.port');  // ❌ Throws if config has string("8080")
+use TypedRegistry\Laravel\Facades\TypedConfig;
 
-// Supports dot notation
-TypedConfig::getString('database.connections.mysql.host');
+// In controllers, services, jobs, etc.
+$driver = TypedConfig::getString('database.default');
+$port = TypedConfig::getInt('database.connections.mysql.port');
+$options = TypedConfig::getStringMap('database.connections.mysql.options');
+
+// With defaults:
+$perPage = TypedConfig::getIntOr('app.pagination.per_page', 15);
 ```
 
-### Full API
-
-Both facades expose the same 20 methods from `TypedRegistry`:
-
-#### Primitive Getters
+Or use the helper function:
 
 ```php
-TypedEnv::getString('KEY');   // string
-TypedEnv::getInt('KEY');      // int
-TypedEnv::getBool('KEY');     // bool
-TypedEnv::getFloat('KEY');    // float
+$driver = typedConfig()->getString('database.default');
 ```
 
-#### Nullable Variants
+## Full API
+
+Both `typedEnv()` and `TypedConfig` expose the same 20 methods from `TypedRegistry`:
+
+### Primitive Getters
 
 ```php
-TypedEnv::getNullableString('KEY');  // string|null
-TypedEnv::getNullableInt('KEY');     // int|null
-TypedEnv::getNullableBool('KEY');    // bool|null
-TypedEnv::getNullableFloat('KEY');   // float|null
+->getString('KEY');   // string - throws if missing/wrong type
+->getInt('KEY');      // int
+->getBool('KEY');     // bool
+->getFloat('KEY');    // float
 ```
 
-#### With Defaults (Never Throws)
+### Nullable Variants
 
 ```php
-TypedEnv::getStringOr('KEY', 'default');  // Returns default if missing/wrong type
-TypedEnv::getIntOr('KEY', 8080);
-TypedEnv::getBoolOr('KEY', false);
-TypedEnv::getFloatOr('KEY', 1.5);
+->getNullableString('KEY');  // string|null
+->getNullableInt('KEY');     // int|null
+->getNullableBool('KEY');    // bool|null
+->getNullableFloat('KEY');   // float|null
 ```
 
-#### Lists (Sequential Arrays)
+### With Defaults (Never Throws)
 
 ```php
-TypedEnv::getStringList('KEY');  // list<string>
-TypedEnv::getIntList('KEY');     // list<int>
-TypedEnv::getBoolList('KEY');    // list<bool>
-TypedEnv::getFloatList('KEY');   // list<float>
+->getStringOr('KEY', 'default');  // Returns default if missing/wrong type
+->getIntOr('KEY', 8080);
+->getBoolOr('KEY', false);
+->getFloatOr('KEY', 1.5);
 ```
 
-#### Maps (Associative Arrays with String Keys)
+### Lists (Sequential Arrays)
 
 ```php
-TypedConfig::getStringMap('KEY');  // array<string, string>
-TypedConfig::getIntMap('KEY');     // array<string, int>
-TypedConfig::getBoolMap('KEY');    // array<string, bool>
-TypedConfig::getFloatMap('KEY');   // array<string, float>
+->getStringList('KEY');  // list<string>
+->getIntList('KEY');     // list<int>
+->getBoolList('KEY');    // list<bool>
+->getFloatList('KEY');   // list<float>
 ```
 
-## Usage Examples
-
-### Dependency Injection
+### Maps (Associative Arrays with String Keys)
 
 ```php
-use TypedRegistry\TypedRegistry;
-
-class MyService
-{
-    public function __construct(
-        private TypedRegistry $env,
-        private TypedRegistry $config
-    ) {}
-
-    public function getSettings(): array
-    {
-        return [
-            'port' => $this->env->getInt('APP_PORT'),
-            'database' => $this->config->getString('database.default'),
-        ];
-    }
-}
-
-// In a service provider:
-app()->bind(MyService::class, function ($app) {
-    return new MyService(
-        $app->make('typed-registry.env'),
-        $app->make('typed-registry.config')
-    );
-});
+->getStringMap('KEY');  // array<string, string>
+->getIntMap('KEY');     // array<string, int>
+->getBoolMap('KEY');    // array<string, bool>
+->getFloatMap('KEY');   // array<string, float>
 ```
 
-### Custom Providers
+## Type Casting Behavior
 
-You can still use typed-registry's core providers directly:
+### EnvProvider - Intelligent Casting
+
+The `EnvProvider` (used by `typedEnv()`) intelligently casts numeric environment variable strings:
 
 ```php
-use TypedRegistry\TypedRegistry;
-use TypedRegistry\Laravel\Providers\EnvProvider;
-use TypedRegistry\Laravel\Providers\ConfigProvider;
+// Integer casting (handles edge cases)
+"123"    → int(123)
+"-456"   → int(-456)
+"0"      → int(0)
+"042"    → int(42)     // Leading zeros removed
+"-042"   → int(-42)    // Negative with leading zeros
+"+42"    → int(42)     // Leading plus removed
+" 042 "  → int(42)     // Whitespace trimmed
 
-// Manual instantiation
-$env = new TypedRegistry(new EnvProvider());
-$config = new TypedRegistry(new ConfigProvider());
+// Integer overflow protection (values exceeding PHP_INT_MAX/MIN)
+"9223372036854775808"  → float(9.223372036854776E+18)  // Too large for int
+"-9223372036854775809" → float(-9.223372036854776E+18) // Too small for int
 
-// Or resolve from container
-$env = app('typed-registry.env');
-$config = app('typed-registry.config');
+// Float casting (decimal point or scientific notation)
+"3.14"   → float(3.14)
+"0.0"    → float(0.0)
+"1e3"    → float(1000.0)        // Scientific notation
+"2.5e-4" → float(0.00025)       // Scientific with decimal
+"1E10"   → float(10000000000.0) // Uppercase E
+"042.5"  → float(42.5)
+
+// No casting
+"Laravel"  → "Laravel"  // Non-numeric
+"123abc"   → "123abc"   // Mixed alphanumeric
+""         → ""         // Empty string
+
+// Laravel's Env handles these:
+"true"     → bool(true)
+"false"    → bool(false)
+"null"     → null
+"(null)"   → null
+```
+
+### ConfigProvider - No Casting
+
+ConfigProvider performs **zero type coercion**. Values must be stored with the correct type:
+
+```php
+// config/app.php
+return [
+    'port' => 8080,        // ✅ int - TypedConfig::getInt() works
+    'port_str' => '8080',  // ❌ string - TypedConfig::getInt() throws
+];
 ```
 
 ## Error Handling
@@ -211,78 +275,45 @@ try {
 
 ```php
 // Returns default value on missing key OR type mismatch
-$port = TypedEnv::getIntOr('NONEXISTENT_PORT', 8080); // 8080
+$port = typedEnv()->getIntOr('NONEXISTENT_PORT', 8080);  // 8080
 $timeout = TypedConfig::getFloatOr('cache.timeout', 3.0); // 3.0
 ```
 
-## Type Casting Behavior
-
-### EnvProvider Casting Logic
-
-The `EnvProvider` intelligently casts numeric environment variable strings:
-
-```php
-// Integer casting (handles leading zeros, plus signs, whitespace, prevents overflow)
-"123"    → int(123)
-"-456"   → int(-456)
-"0"      → int(0)
-"042"    → int(42)     // Leading zeros removed
-"-042"   → int(-42)    // Negative with leading zeros
-"+42"    → int(42)     // Leading plus removed
-" 042 "  → int(42)     // Whitespace trimmed
-
-// Integer overflow protection (values exceeding PHP_INT_MAX/MIN)
-"9223372036854775808"  → float(9.223372036854776E+18)  // Too large for int
-"-9223372036854775809" → float(-9.223372036854776E+18) // Too small for int
-
-// Float casting (anything with decimal point or scientific notation)
-"3.14"   → float(3.14)
-"0.0"    → float(0.0)
-"1e3"    → float(1000.0)
-"2.5e-4" → float(0.00025)
-"042.5"  → float(42.5)
-
-// No casting
-"Laravel"  → "Laravel" (non-numeric)
-"123abc"   → "123abc" (mixed alphanumeric)
-""         → "" (empty string)
-
-// Laravel's Env handles these:
-"true"     → bool(true)
-"false"    → bool(false)
-"null"     → null
-"(null)"   → null
-```
-
-### ConfigProvider - No Casting
-
-ConfigProvider performs **zero type coercion**. Values must be stored with the correct type:
+## Real-World Example
 
 ```php
 // config/app.php
 return [
-    'port' => 8080,        // ✅ int
-    'port_str' => '8080',  // ❌ string (TypedConfig::getInt() throws)
+    'name' => typedEnv()->getStringOr('APP_NAME', 'Laravel'),
+    'env' => typedEnv()->getStringOr('APP_ENV', 'production'),
+    'debug' => typedEnv()->getBoolOr('APP_DEBUG', false),
+    'url' => typedEnv()->getStringOr('APP_URL', 'http://localhost'),
+
+    'timezone' => 'UTC',
+
+    'locale' => typedEnv()->getStringOr('APP_LOCALE', 'en'),
+
+    'providers' => [
+        // Service providers...
+    ],
 ];
 ```
 
-## Comparison
-
-### Before (Mixed Types)
-
 ```php
-$port = env('APP_PORT');        // string("8080") or int(8080)?
-$debug = config('app.debug');   // mixed (could be anything)
+// app/Http/Controllers/DashboardController.php
+use TypedRegistry\Laravel\Facades\TypedConfig;
 
-// Need manual validation
-$port = is_numeric($port) ? (int)$port : 8080;
-```
+class DashboardController extends Controller
+{
+    public function index()
+    {
+        $appName = TypedConfig::getString('app.name');
+        $isDebug = TypedConfig::getBool('app.debug');
+        $locale = TypedConfig::getString('app.locale');
 
-### After (Type-Safe)
-
-```php
-$port = TypedEnv::getIntOr('APP_PORT', 8080);  // int(8080), guaranteed
-$debug = TypedConfig::getBool('app.debug');     // bool, or throws
+        return view('dashboard', compact('appName', 'isDebug', 'locale'));
+    }
+}
 ```
 
 ## PHPStan Integration
@@ -291,7 +322,7 @@ The package works seamlessly with PHPStan at max level:
 
 ```php
 /** @var int $port */
-$port = TypedEnv::getInt('APP_PORT'); // PHPStan knows this is int
+$port = TypedConfig::getInt('app.port'); // PHPStan knows this is int
 
 /** @var list<string> $hosts */
 $hosts = TypedConfig::getStringList('app.hosts'); // PHPStan knows the shape
@@ -316,7 +347,7 @@ composer phpstan
 - PHPStan Level: Max (10) with strict rules
 - Test Coverage: All providers and facades
 - PHP Version: 8.3+
-- Laravel Version: 11+
+- Laravel Version: 11+, 12+
 
 ## Comparison with Core Package
 
@@ -324,9 +355,10 @@ composer phpstan
 |---------|---------------------------|-----------------------------------|
 | Framework | Framework-agnostic | Laravel-specific |
 | Type Casting | None (strict only) | `EnvProvider` casts numeric strings |
-| Facades | No | `TypedEnv`, `TypedConfig` |
+| Facades | No | `TypedConfig` |
+| Helper Functions | No | `typedEnv()`, `typedConfig()` |
 | Auto-discovery | N/A | Yes |
-| Dependencies | Zero | `illuminate/support`, `illuminate/contracts` |
+| Laravel Best Practices | N/A | Enforced (env only in config) |
 
 ## Contributing
 
