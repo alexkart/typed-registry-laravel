@@ -66,47 +66,6 @@ class UserController
 }
 ```
 
-## Laravel Best Practices
-
-### ✅ Correct: Environment Variables
-
-```php
-// ✅ In config files ONLY
-// config/database.php
-return [
-    'host' => typedEnv()->getStringOr('DB_HOST', '127.0.0.1'),
-    'port' => typedEnv()->getIntOr('DB_PORT', 3306),
-];
-```
-
-### ❌ Wrong: Direct env() in Controllers/Services
-
-```php
-// ❌ NEVER do this - violates Laravel best practices
-class UserController
-{
-    public function index()
-    {
-        $host = env('DB_HOST');  // ❌ Wrong!
-        $port = typedEnv()->getInt('DB_PORT'); // ❌ Still wrong!
-    }
-}
-```
-
-### ✅ Correct: Use Config Instead
-
-```php
-// ✅ Correct - access config, not env
-class UserController
-{
-    public function index()
-    {
-        $host = TypedConfig::getString('database.connections.mysql.host');
-        $port = TypedConfig::getInt('database.connections.mysql.port');
-    }
-}
-```
-
 ## Features
 
 ### `typedEnv()` Helper - For Config Files Only
