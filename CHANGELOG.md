@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ConfigProvider tests (15 test cases)
   - ServiceProvider integration tests
 - PHPStan Level Max compliance with strict rules
-- GitHub Actions CI for PHP 8.3, 8.4 with Laravel 11
+- GitHub Actions CI for PHP 8.3, 8.4 with Laravel 11 and 12
 - Comprehensive documentation and usage examples
 
 ### Requirements
