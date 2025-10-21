@@ -15,13 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ConfigProvider` - Laravel configuration repository provider (strict, no type casting)
   - Supports dot-notation for nested config access
   - Zero coercion, strict type validation only
-- `TypedEnv` facade for type-safe environment variable access
+- `typedEnv()` helper function for type-safe environment variable access in config files
 - `TypedConfig` facade for type-safe configuration access
+- `typedConfig()` helper function as an alternative to the TypedConfig facade
 - `TypedRegistryServiceProvider` with Laravel auto-discovery support
 - Full test suite with 100% coverage
   - EnvProvider tests (24 test cases)
   - ConfigProvider tests (15 test cases)
-  - ServiceProvider integration tests (14 test cases)
+  - ServiceProvider integration tests
 - PHPStan Level Max compliance with strict rules
 - GitHub Actions CI for PHP 8.3, 8.4 with Laravel 11
 - Comprehensive documentation and usage examples

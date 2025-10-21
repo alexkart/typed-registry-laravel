@@ -6,11 +6,11 @@ namespace TypedRegistry\Laravel\Tests\Integration;
 
 use Orchestra\Testbench\TestCase;
 use TypedRegistry\Laravel\Facades\TypedConfig;
-use TypedRegistry\Laravel\Facades\TypedEnv;
 use TypedRegistry\Laravel\TypedRegistryServiceProvider;
 use TypedRegistry\TypedRegistry;
 
 use function putenv;
+use function typedEnv;
 
 /**
  * Integration tests for TypedRegistryServiceProvider and facades.
@@ -25,7 +25,6 @@ final class ServiceProviderTest extends TestCase
     protected function getPackageAliases($app): array
     {
         return [
-            'TypedEnv' => TypedEnv::class,
             'TypedConfig' => TypedConfig::class,
         ];
     }
@@ -36,13 +35,6 @@ final class ServiceProviderTest extends TestCase
         parent::tearDown();
     }
 
-    public function testEnvRegistryIsRegisteredInContainer(): void
-    {
-        $registry = $this->app->make('typed-registry.env');
-
-        self::assertInstanceOf(TypedRegistry::class, $registry);
-    }
-
     public function testConfigRegistryIsRegisteredInContainer(): void
     {
         $registry = $this->app->make('typed-registry.config');
@@ -50,19 +42,11 @@ final class ServiceProviderTest extends TestCase
         self::assertInstanceOf(TypedRegistry::class, $registry);
     }
 
-    public function testEnvAndConfigRegistriesAreSeparateInstances(): void
-    {
-        $envRegistry = $this->app->make('typed-registry.env');
-        $configRegistry = $this->app->make('typed-registry.config');
-
-        self::assertNotSame($envRegistry, $configRegistry);
-    }
-
-    public function testTypedEnvFacadeWorks(): void
+    public function testTypedEnvHelperWorks(): void
     {
         putenv('TEST_VAR=8080');
 
-        $value = TypedEnv::getInt('TEST_VAR');
+        $value = typedEnv()->getInt('TEST_VAR');
 
         self::assertSame(8080, $value);
     }
@@ -76,12 +60,12 @@ final class ServiceProviderTest extends TestCase
         self::assertSame('TestApp', $value);
     }
 
-    public function testTypedEnvFacadePerformsTypeCasting(): void
+    public function testTypedEnvHelperPerformsTypeCasting(): void
     {
         putenv('TEST_VAR=123');
 
         // EnvProvider should cast "123" to int(123)
-        $value = TypedEnv::getInt('TEST_VAR');
+        $value = typedEnv()->getInt('TEST_VAR');
 
         self::assertSame(123, $value);
     }
@@ -97,9 +81,9 @@ final class ServiceProviderTest extends TestCase
         TypedConfig::getInt('test.port');
     }
 
-    public function testTypedEnvFacadeSupportsDefaults(): void
+    public function testTypedEnvHelperSupportsDefaults(): void
     {
-        $value = TypedEnv::getIntOr('NONEXISTENT_KEY', 9000);
+        $value = typedEnv()->getIntOr('NONEXISTENT_KEY', 9000);
 
         self::assertSame(9000, $value);
     }
@@ -111,13 +95,13 @@ final class ServiceProviderTest extends TestCase
         self::assertSame('default', $value);
     }
 
-    public function testTypedEnvFacadeSupportsLists(): void
+    public function testTypedEnvHelperSupportsLists(): void
     {
         putenv('TEST_VAR=not-a-list');
 
         $this->expectException(\TypedRegistry\RegistryTypeError::class);
 
-        TypedEnv::getStringList('TEST_VAR');
+        typedEnv()->getStringList('TEST_VAR');
     }
 
     public function testTypedConfigFacadeSupportsNestedKeys(): void
@@ -135,16 +119,7 @@ final class ServiceProviderTest extends TestCase
 
         $provides = $provider->provides();
 
-        self::assertContains('typed-registry.env', $provides);
         self::assertContains('typed-registry.config', $provides);
-    }
-
-    public function testEnvRegistryIsSingleton(): void
-    {
-        $instance1 = $this->app->make('typed-registry.env');
-        $instance2 = $this->app->make('typed-registry.env');
-
-        self::assertSame($instance1, $instance2);
     }
 
     public function testConfigRegistryIsSingleton(): void
