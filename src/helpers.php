@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use TypedRegistry\Laravel\Providers\ConfigProvider;
 use TypedRegistry\Laravel\Providers\EnvProvider;
+use TypedRegistry\Laravel\Providers\EnvStringProvider;
 use TypedRegistry\TypedRegistry;
 
 if (! function_exists('typedEnv')) {
@@ -28,6 +29,33 @@ if (! function_exists('typedEnv')) {
     function typedEnv(): TypedRegistry
     {
         return new TypedRegistry(new EnvProvider);
+    }
+}
+
+if (! function_exists('typedEnvString')) {
+    /**
+     * Get a typed environment variable registry that casts all scalars to strings.
+     *
+     * This helper is useful when you need to retrieve environment variables that
+     * are semantically strings but may contain only digits (e.g., passwords, tokens).
+     * Unlike typedEnv() which casts numeric strings to int/float, this helper
+     * ensures all scalar values are returned as strings.
+     *
+     * @return TypedRegistry A typed registry for accessing environment variables as strings
+     *
+     * @example
+     * ```php
+     * // In config files:
+     * // .env: API_PASSWORD=123456
+     * $password = typedEnvString()->getStringOr('API_PASSWORD', ''); // "123456"
+     *
+     * // Compare with typedEnv():
+     * $password = typedEnv()->getStringOr('API_PASSWORD', ''); // "" (cast to int first)
+     * ```
+     */
+    function typedEnvString(): TypedRegistry
+    {
+        return new TypedRegistry(new EnvStringProvider);
     }
 }
 

@@ -12,6 +12,7 @@ Laravel's `env()` and `config()` helpers return `mixed` values, making strict ty
 
 - **Type-safe config access** - `TypedConfig` facade and `typedConfig()` helper with strict return types
 - **Type-safe env access** - `typedEnv()` helper for use in config files only (following Laravel best practices)
+- **String-preserving env access** - `typedEnvString()` helper for values that must stay strings (passwords, tokens)
 - **Intelligent casting** - Environment variables automatically cast from strings (`"8080"` → `8080`, `"1e3"` → `1000.0`)
 - **PHPStan ready** - Works seamlessly with static analysis at max level
 - **Zero runtime overhead** - Simple wrappers around Laravel's existing systems
@@ -93,6 +94,27 @@ return [
 - Null strings (`"null"`, `"(null)"`) → `null` (handled by Laravel's `Env`)
 - All other strings remain unchanged
 
+### `typedEnvString()` Helper - For String Values
+
+Use this helper when you have environment variables that are semantically strings but may contain only digits (passwords, tokens, API keys):
+
+```php
+// config/auth.php
+return [
+    // Problem: typedEnv() casts "123456" to int, getStringOr returns ''
+    // 'password' => typedEnv()->getStringOr('API_PASSWORD', ''),
+
+    // Solution: typedEnvString() keeps all values as strings
+    'password' => typedEnvString()->getStringOr('API_PASSWORD', ''),
+    'token' => typedEnvString()->getString('API_TOKEN'),
+];
+```
+
+**Casting Rules:**
+- All scalar values (string, int, float, bool) → `string`
+- Booleans: `true` → `"1"`, `false` → `""` (PHP's native casting)
+- Null remains `null`
+
 ### `TypedConfig` Facade - Use Anywhere
 
 Wraps Laravel's `Config` facade with **strict typing, no casting**:
@@ -117,7 +139,7 @@ $driver = typedConfig()->getString('database.default');
 
 ## Full API
 
-Both `typedEnv()` and `TypedConfig` expose the same 20 methods from `TypedRegistry`:
+All three helpers (`typedEnv()`, `typedEnvString()`, and `TypedConfig`) expose the same 20 methods from `TypedRegistry`:
 
 ### Primitive Getters
 
@@ -202,6 +224,24 @@ The `EnvProvider` (used by `typedEnv()`) intelligently casts numeric environment
 "false"    → bool(false)
 "null"     → null
 "(null)"   → null
+```
+
+### EnvStringProvider - Cast to String
+
+The `EnvStringProvider` (used by `typedEnvString()`) casts all scalar values to strings:
+
+```php
+// All values become strings
+"123456"   → "123456"   // Numeric string preserved
+"3.14"     → "3.14"     // Float string preserved
+"1e3"      → "1e3"      // Scientific notation preserved
+"042"      → "042"      // Leading zeros preserved
+"Laravel"  → "Laravel"  // Non-numeric unchanged
+
+// Laravel's Env converts these first, then we cast to string:
+"true"     → "1"        // bool(true) → string
+"false"    → ""         // bool(false) → string
+"null"     → null       // Stays null (not scalar)
 ```
 
 ### ConfigProvider - No Casting
@@ -314,8 +354,9 @@ composer phpstan
 |---------|---------------------------|-----------------------------------|
 | Framework | Framework-agnostic | Laravel-specific |
 | Type Casting | None (strict only) | `EnvProvider` casts numeric strings |
+| String Preservation | N/A | `EnvStringProvider` keeps all as strings |
 | Facades | No | `TypedConfig` |
-| Helper Functions | No | `typedEnv()`, `typedConfig()` |
+| Helper Functions | No | `typedEnv()`, `typedEnvString()`, `typedConfig()` |
 | Auto-discovery | N/A | Yes |
 | Laravel Best Practices | N/A | Enforced (env only in config) |
 

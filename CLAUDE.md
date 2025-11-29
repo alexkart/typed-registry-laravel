@@ -60,13 +60,15 @@ composer update
 
 1. **Providers** (`src/Providers/`)
    - `EnvProvider` - Wraps `Illuminate\Support\Env` with intelligent type casting
+   - `EnvStringProvider` - Wraps `Illuminate\Support\Env`, casts all scalars to strings
    - `ConfigProvider` - Wraps Laravel's `Config` facade (strict, no casting)
 
 2. **Facades** (`src/Facades/`)
    - `TypedConfig` - For accessing configuration anywhere in the application
 
 3. **Helper Functions** (`src/helpers.php`)
-   - `typedEnv()` - For use in config files only
+   - `typedEnv()` - For use in config files only (with numeric casting)
+   - `typedEnvString()` - For use in config files only (all scalars as strings)
    - `typedConfig()` - Alternative to TypedConfig facade
 
 4. **Service Provider** (`src/TypedRegistryServiceProvider.php`)
@@ -95,6 +97,14 @@ Instead, use:
 - Handles scientific notation (`"1e3"` → `1000.0`)
 - Manages edge cases (leading zeros, overflow, whitespace)
 - Philosophy: Environment variables are strings in `.env`, casting makes them usable
+
+**EnvStringProvider (cast to string)**:
+- Used by `typedEnvString()` helper
+- Casts all scalar values to strings (no numeric conversion)
+- Useful for passwords, tokens, API keys that may be all-numeric
+- Booleans: `true` → `"1"`, `false` → `""` (PHP native casting)
+- Null stays null
+- Philosophy: Some values are semantically strings even if they look like numbers
 
 **ConfigProvider (no casting)**:
 - Used by `TypedConfig` facade
@@ -244,16 +254,19 @@ The `EnvProvider` implements intelligent type casting following these rules:
 ## Key Files
 
 - `src/Providers/EnvProvider.php` - Environment variable provider with intelligent casting
+- `src/Providers/EnvStringProvider.php` - Environment variable provider that casts all scalars to strings
 - `src/Providers/ConfigProvider.php` - Configuration provider (strict, no casting)
 - `src/Facades/TypedConfig.php` - Configuration facade
 - `src/helpers.php` - Global helper functions
 - `src/TypedRegistryServiceProvider.php` - Laravel service provider
 - `tests/Providers/EnvProviderTest.php` - Comprehensive EnvProvider tests
+- `tests/Providers/EnvStringProviderTest.php` - Comprehensive EnvStringProvider tests
 - `README.md` - User-facing documentation
 
 ## Remember
 
-- Environment variables are accessed via `typedEnv()` in config files ONLY
+- Environment variables are accessed via `typedEnv()` or `typedEnvString()` in config files ONLY
+- Use `typedEnvString()` for values that must stay strings (passwords, tokens, API keys)
 - Application code uses `TypedConfig` facade or `typedConfig()` helper to access config
 - No `TypedEnv` facade exists - this is intentional to enforce Laravel best practices
 - All casting happens in providers, facades and helpers just expose TypedRegistry methods
