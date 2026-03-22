@@ -25,7 +25,7 @@ composer require alexkart/typed-registry-laravel
 
 Requires:
 - PHP 8.3+
-- Laravel 11+ or 12+
+- Laravel 11+ or 12+ or 13+
 
 The package uses Laravel's auto-discovery feature. The service provider and facade are registered automatically.
 
@@ -346,7 +346,7 @@ composer phpstan
 - PHPStan Level: Max (10) with strict rules
 - Test Coverage: All providers and facades
 - PHP Version: 8.3+
-- Laravel Version: 11+, 12+
+- Laravel Version: 11+, 12+, 13+
 
 ## Comparison with Core Package
 

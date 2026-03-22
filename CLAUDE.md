@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Namespace:** `TypedRegistry\Laravel\`
 **PHP Version:** ≥8.3
-**Laravel Version:** ≥11.0, ≥12.0
+**Laravel Version:** ≥11.0, ≥12.0, ≥13.0
 **Quality Target:** PHPStan Level Max (10), zero errors, zero baseline
 
 ## Laravel Best Practices
@@ -234,8 +234,8 @@ The `EnvProvider` implements intelligent type casting following these rules:
 ## Package Dependencies
 
 - `alexkart/typed-registry` (^0.1) - Core TypedRegistry functionality
-- `illuminate/support` (^11.0|^12.0) - Laravel Env and helpers
-- `illuminate/contracts` (^11.0|^12.0) - Laravel contracts
+- `illuminate/support` (^11.0|^12.0|^13.0) - Laravel Env and helpers
+- `illuminate/contracts` (^11.0|^12.0|^13.0) - Laravel contracts
 
 ## Publishing Workflow
 
