@@ -1,0 +1,10 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "enabledPlugins": {
+    "php-lsp@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true
+  }
+}
