@@ -250,6 +250,38 @@ final class EnvProviderTest extends TestCase
         self::assertIsInt($value);
     }
 
+    public function testHandlesFormFeedWhitespacePrefix(): void
+    {
+        putenv("TEST_VAR=\f8080");
+        $value = $this->provider->get('TEST_VAR');
+
+        // is_numeric() treats a leading form-feed (\f, 0x0C) as whitespace, so the value
+        // must be trimmed and cast to int(8080) - not fall through to float(8080.0).
+        self::assertSame(8080, $value);
+        self::assertIsInt($value);
+    }
+
+    public function testHandlesFormFeedWhitespaceSuffix(): void
+    {
+        putenv("TEST_VAR=8080\f");
+        $value = $this->provider->get('TEST_VAR');
+
+        // A trailing form-feed must be trimmed just like a leading one.
+        self::assertSame(8080, $value);
+        self::assertIsInt($value);
+    }
+
+    public function testIntegrationFormFeedReturnsParsedIntNotDefault(): void
+    {
+        putenv("TEST_VAR=\f8080");
+
+        // Regression: before the fix, "\f8080" cast to float, so getInt() threw and
+        // getIntOr() silently returned the default instead of the real parsed value.
+        $port = $this->registry->getIntOr('TEST_VAR', 3000);
+
+        self::assertSame(8080, $port);
+    }
+
     public function testHandlesLeadingZerosWithDecimal(): void
     {
         putenv('TEST_VAR=042.5');

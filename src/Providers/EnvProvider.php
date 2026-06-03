@@ -62,8 +62,12 @@ final class EnvProvider implements Provider
             return $value;
         }
 
-        // Trim whitespace (is_numeric allows it, but we need clean strings)
-        $value = trim($value);
+        // Trim the whitespace is_numeric() tolerates so the value casts cleanly below.
+        // The default trim() mask omits the form-feed byte (\f, 0x0C) that is_numeric()
+        // accepts as surrounding whitespace, so we pass an explicit mask covering the full
+        // set. Without \f here, a form-feed-padded integer (e.g. "\f8080") would survive
+        // untrimmed, fail FILTER_VALIDATE_INT, and wrongly fall through to the float branch.
+        $value = trim($value, " \t\n\r\0\x0B\x0C");
 
         // Check if it's a float representation (contains decimal point or scientific notation)
         if (strpbrk($value, '.eE') !== false) {
